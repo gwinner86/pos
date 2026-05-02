@@ -1,0 +1,39 @@
+You are an expert Frontend Developer.
+
+Your task is to implement the **Authentication Module** for the POS Application based on the provided API Swagger documentation.
+
+**API Endpoints:**
+-   `POST /api/Auth/login` (Request: `LoginRequest`, Response: `LoginResponse` with `Token`, `RefreshToken`)
+-   `POST /api/Auth/register-tenant` (Optional, for onboarding)
+-   `POST /api/Auth/refresh-token` (if available, otherwise handle session expiry)
+
+**Requirements:**
+
+1.  **Login Page (`/login`):**
+    -   **Design:** Modern, minimalist, centered card layout. Glassmorphism effect or clean shadow depth.
+    -   **Fields:** Email, Password.
+    -   **Features:**
+        -   "Remember Me" checkbox.
+        -   "Forgot Password?" link.
+        -   Password visibility toggle (Show/Hide).
+    -   **Validation:** Zod schema validation (e.g., valid email, min password length).
+    -   **Feedback:** Loading state on submit button, Inline error messages for invalid credentials.
+
+2.  **Auth Context / Hook (`useAuth`):**
+    -   Create a robust `AuthProvider` to manage user session state.
+    -   **Functions:** `login(credentials)`, `logout()`.
+    -   **State:** `user` (User profile object), `isAuthenticated` (boolean), `isLoading` (boolean).
+    -   **Persistance:** Store the JWT Token securely (HttpOnly cookies preferred, or generic Cookie/LocalStorage if API requires Bearer header manually).
+    -   **Redirects:**
+        -   If logged in, redirect away from `/login` to `/dashboard`.
+        -   If not logged in, protect private routes (Middleware or Higher-Order Component).
+
+3.  **Middleware (Next.js Middleware):**
+    -   Implement `middleware.ts` to protect all `/dashboard/*` routes.
+    -   Redirect unauthenticated users to `/login`.
+
+4.  **Deliverables:**
+    -   Code for `LoginPage` component.
+    -   Code for `AuthContext` and `useAuth` hook.
+    -   Code for `middleware.ts`.
+    -   Zod schema for login.

@@ -1,0 +1,36 @@
+You are a Senior React Developer.
+
+Your task is to implement the **CRM (Customers)** and **Procurement (Suppliers)** modules.
+
+**API References:**
+-   Customers: `GET/POST/PUT /api/Customers`
+-   Suppliers: `GET/POST/PUT /api/Suppliers`
+-   Purchase Orders: `GET/POST /api/PurchaseOrders`
+
+**Requirements:**
+
+1.  **Shared Components:**
+    -   Both Customers and Suppliers share similar "Contact" structures (Name, Email, Phone, Address).
+    -   Create reusable `ContactForm` or distinct forms if fields diverge significantly.
+
+2.  **Customer Management:**
+    -   **List View:** Table with search/filter.
+    -   **Detail View:** Clicking a customer shows their profile AND their **Purchase History** (Sales linked to this customer).
+    -   **Features:** Ability to set Credit Limit (if API supports) or add Notes.
+
+3.  **Supplier & Procurement:**
+    -   **Supplier List:** Standard CRUD.
+    -   **Purchase Order (PO) Creation:**
+        -   Select Supplier.
+        -   Add Products (Line items similar to POS but with Cost Price focus).
+        -   Save as Draft / Submit.
+    -   **Goods Receipt:** Interface to "Receive" a PO, verifying quantities received into Inventory.
+
+4.  **UX/UI:**
+    -   Clean, data-dense tables.
+    -   Use specific status badges (e.g., PO Status: "Pending" [Yellow], "Received" [Green]).
+
+5.  **Deliverables:**
+    -   Code for `CustomersPage` & `CustomerDetails`.
+    -   Code for `SuppliersPage`.
+    -   Code for `PurchaseOrderForm` (Master-Detail form).

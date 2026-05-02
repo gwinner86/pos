@@ -1,0 +1,818 @@
+------- ROLES AND PERMISSION TABLES FOR MULTI-TENANT POS SYSTEM ---------
+---CREATE THE TABLE FOR ROLES AND PERMISSIONS
+
+{
+  "email": "godwin@wintech.com",
+  "password": "Password@1234",
+  "tenantId": "202a212d-e8c2-494b-b233-925af15921d7"
+}
+---===============
+
+---------- FEATURES AND TABLES FOR MULTI-TENANT POS SYSTEM ----------
+
+CREATE TABLES Features(
+    FeatureId INT PRIMARY KEY IDENTITY(1,1),
+    FeatureName NVARCHAR(100) NOT NULL,
+    Description NVARCHAR(255),
+    IsActive BIT NOT NULL DEFAULT 1
+)
+
+
+---------Feature details per tenant
+CREATE TABLE FeatureDetails(
+    FeatureDetailId INT PRIMARY KEY IDENTITY(1,1),
+    FeatureId INT NOT NULL,
+    SpecificFeature NVARCHAR(100) NOT NULL,
+    SpecificFeatureValue TEXT NOT NULL,
+    IsEnabled BIT NOT NULL DEFAULT 0,
+    FOREIGN KEY (TenantId) REFERENCES Tenant(TenantId),
+    FOREIGN KEY (FeatureId) REFERENCES Features(FeatureId)
+)
+
+
+
+
+------------ FEATURE ASSIGNMENT TO TENANT
+CREATE TABLE TenantFeatureAssignment(
+    AssignmentId INT PRIMARY KEY IDENTITY(1,1),
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    CompanyId UNIQUEIDENTIFIER NULL,
+    LocationId UNIQUEIDENTIFIER NULL,
+    FeatureId INT NOT NULL,
+    IsEnabled BIT NOT NULL DEFAULT 0,
+    FOREIGN KEY (TenantId) REFERENCES Tenant(TenantId),
+    FOREIGN KEY (FeatureId) REFERENCES Features(FeatureId)
+)
+
+-- 1. Tenant Table (The "Mother" Account)
+CREATE TABLE Tenant (
+    TenantId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    TenantName NVARCHAR(255) NOT NULL,
+    FeatureId INT NOT NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- 2. Company Table (The Business Unit)
+CREATE TABLE Company (
+    CompanyId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    FeatureId INT NULL,
+    CompanyName NVARCHAR(255) NOT NULL,
+    CompanyAddress NVARCHAR(500),
+    CompanyPrimaryPhoneNumber NVARCHAR(50),
+    CompanyOtherPhoneNumbers NVARCHAR(50),
+    CompanyEmail NVARCHAR(255),
+    TaxId NVARCHAR(50),
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY (TenantId) REFERENCES Tenant(TenantId)
+);
+-- Index for faster filtering by tenant
+CREATE INDEX IX_Company_TenantId ON Company (TenantId);
+
+
+-- 11. User Table (Login Accounts)
+CREATE TABLE [User] (
+    UserId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    Email NVARCHAR(255) NOT NULL UNIQUE, -- Login Identifier
+    PasswordHash NVARCHAR(255) NOT NULL, -- Hashed Password
+    FirstName NVARCHAR(100),
+    LastName NVARCHAR(100),
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+    CreatedBy UNIQUEIDENTIFIER NULL, -- User who created this account
+);
+
+--------------------------------------------------------------
+
+-- 10. Role Table (Permissions)
+CREATE TABLE Role (
+    RoleId INT PRIMARY KEY IDENTITY(1,1), -- Using INT for simplicity
+    RoleName NVARCHAR(50) NOT NULL UNIQUE,
+    TenantId UNIQUEIDENTIFIER NULL, -- NULL for global roles, TenantId for tenant-specific roles
+    CompanyId UNIQUEIDENTIFIER NULL, -- NULL for global/tenant roles, CompanyId for company
+    Description NVARCHAR(255)
+);
+
+
+-- 12. UserCompanyAssignment (Tenant/Company-Specific Authorization)
+CREATE TABLE UserCompanyAssignment (
+    AssignmentId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    UserId UNIQUEIDENTIFIER NOT NULL,
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    RoleId INT NOT NULL,
+    LocationId UNIQUEIDENTIFIER NULL, -- User access restricted to a specific branch (e.g., Cashier)
+
+    FOREIGN KEY (UserId) REFERENCES [User](UserId),
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId),
+    FOREIGN KEY (RoleId) REFERENCES Role(RoleId),
+    FOREIGN KEY (LocationId) REFERENCES Location(LocationId),
+    -- Constraint to prevent a user from having the exact same assignment multiple times
+    CONSTRAINT UQ_User_Company_Role UNIQUE (UserId, CompanyId, RoleId) 
+);
+
+-- Recommended Indexes for fast lookup on login
+CREATE INDEX IX_Assignment_UserId_CompanyId ON UserCompanyAssignment (UserId, CompanyId);
+
+
+
+
+
+Table,Purpose,Relationship to Tenant
+Tenant,"The top-level account (the ""mother"") that owns one or more companies. Used for primary data isolation.",N/A (Top-level)
+Company,The actual business unit under a tenant.,Many-to-one with Tenant
+Location,"The physical branches, stores, or warehouses under a company. This will be the primary link for Inventory and Pricing.",Many-to-one with Company
+=============================================================================================================================================================
+
+
+
+-- 3. Location Table (Branches/Warehouses) ::: Where Sales are been done
+
+CREATE TABLE Location (
+    LocationId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    FeatureId INT NULL,
+    LocationName NVARCHAR(255) NOT NULL,
+    LocationType NVARCHAR(50) NOT NULL, -- e.g., 'Store', 'Warehouse', 'Kiosk'
+    AddressLine1 NVARCHAR(255),
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NULL, -- User who created this location
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId)
+);
+-- Index for faster filtering by company
+CREATE INDEX IX_Location_CompanyId ON Location (CompanyId);
+
+
+
+
+------------------------------------------------------------------------
+
+--------- Category Setup
+CREATE TABLE Category (
+    CategoryId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    CategoryName NVARCHAR(255) NOT NULL,
+    ParentCategoryId UNIQUEIDENTIFIER NULL, -- For hierarchical categories
+    LocationId UNIQUEIDENTIFIER NULL, -- Optional: Category specific to a location
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NULL, -- User who created this category
+    FOREIGN KEY (CompanyId) REFERENCES
+)
+
+
+-- 4. Product Table
+CREATE TABLE Product (
+    ProductId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL, -- Ties product to a specific company
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    ProductName NVARCHAR(255) NOT NULL,
+    ProductSkuBase NVARCHAR(50) NOT NULL, -- Base SKU (e.g., TS001)
+    CategoryId NVARCHAR(100),
+    LocationId UNIQUEIDENTIFIER NULL, -- Optional: Product specific to a location
+    Description NVARCHAR(1000),
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NULL, -- User who created this product
+    LastUpdated DATETIME2 NOT NULL DEFAULT GETDATE(),
+    UpdatedBy UNIQUEIDENTIFIER NULL, -- User who last updated this product
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId),
+    CONSTRAINT UQ_Product_Company_Sku UNIQUE (CompanyId, ProductSkuBase) -- Ensures SKU is unique per company
+);
+
+-- 5. ProductVariant Table. :: Todo: Variants of the product (e.g., Size, Color)
+CREATE TABLE ProductVariant (
+    ProductVariantId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    VariantName NVARCHAR(255) NOT NULL, -- e.g., "Size L, Red"
+    VariantSku NVARCHAR(50) NOT NULL, -- Full SKU (e.g., TS001-L-RED)
+    Barcode NVARCHAR(50),
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NULL, -- User who created this variant
+    LastUpdated DATETIME2 NOT NULL DEFAULT GETDATE(),
+    UpdatedBy UNIQUEIDENTIFIER NULL, -- User who last updated this variant
+    FOREIGN KEY (ProductId) REFERENCES Product(ProductId),
+    CONSTRAINT UQ_Variant_Product_Sku UNIQUE (ProductId, VariantSku)
+);
+
+
+
+CREATE TABLE Inventory (
+    InventoryId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    ProductVariantId UNIQUEIDENTIFIER NOT NULL,
+    LocationId UNIQUEIDENTIFIER NOT NULL,
+    InitialQuantity DECIMAL(18, 4) NOT NULL DEFAULT 0, -- Use DECIMAL for high precision stock
+    Quantity DECIMAL(18, 4) NOT NULL DEFAULT 0, 
+    TotalQuantitySold DECIMAL(18, 4) NOT NULL DEFAULT 0, 
+    TotalQuantityReturned DECIMAL(18, 4) NOT NULL DEFAULT 0, 
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created this inventory record
+    LastUpdated DATETIME2 NULL DEFAULT GETDATE(),
+    UpdatedBy UNIQUEIDENTIFIER NULL, -- User who last updated this inventory record
+    CONSTRAINT UQ_Inventory_Variant_Location UNIQUE (ProductVariantId, LocationId),
+    FOREIGN KEY (ProductVariantId) REFERENCES ProductVariant(ProductVariantId),
+    FOREIGN KEY (LocationId) REFERENCES Location(LocationId)
+);
+
+
+
+-- 9. Supplier Table
+CREATE TABLE Supplier (
+    SupplierId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    SupplierName NVARCHAR(255) NOT NULL,
+    ContactName NVARCHAR(255),
+    ContactEmail NVARCHAR(255),
+    Phone NVARCHAR(50),
+    Terms NVARCHAR(50), -- e.g., 'Net 30', 'COD'
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NULL, -- User who created this supplier
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId),
+    CONSTRAINT UQ_Supplier_Company_Name UNIQUE (CompanyId, SupplierName) -- Ensures name is unique per company
+);
+
+----- 10 Purchases table  :: PurchaseOrder IS used to get order for goods from suppliers
+
+
+CREATE TABLE PurchaseOrder (
+    PurchaseOrderId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    LocationId UNIQUEIDENTIFIER NOT NULL,
+    SupplierId UNIQUEIDENTIFIER NOT NULL,
+    OrderDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+    ExpectedDeliveryDate DATETIME2 NULL,
+    TotalAmount DECIMAL(18, 2) NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NULL, -- User who created the purchase order
+    LastUpdated DATETIME2 NULL DEFAULT GETDATE(),
+    UpdatedBy UNIQUEIDENTIFIER NULL, -- User who last updated the purchase order
+    Status NVARCHAR(50) NOT NULL, -- e.g., 'Pending', 'Received', 'Canceled'
+    FOREIGN KEY (CompanyId) REFERENCES
+);
+
+CREATE TABLE PurchaseOrderDetails (
+    PurchaseOrderItemId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    PurchaseOrderId UNIQUEIDENTIFIER NOT NULL,
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    ProductVariantId UNIQUEIDENTIFIER NOT NULL,
+    Quantity DECIMAL(18, 4) NOT NULL,
+    UnitCost DECIMAL(18, 2) NOT NULL,
+    LineTotal DECIMAL(18, 2) NOT NULL,  -- UnitCost * Quantity
+    QuantityReceived DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    FOREIGN KEY (PurchaseOrderId) REFERENCES PurchaseOrder(PurchaseOrderId),
+    FOREIGN KEY (ProductVariantId) REFERENCES ProductVariant(ProductVariantId)
+);
+
+
+
+--------- Goods Receipts Table
+CREATE TABLE GoodsReceipt (
+    GoodsReceiptId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    PurchaseOrderId UNIQUEIDENTIFIER NULL,
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    LocationId UNIQUEIDENTIFIER NOT NULL,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    SupplierId UNIQUEIDENTIFIER NULL,
+    ReceiptDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+    TotalReceivedAmount DECIMAL(18, 2) NOT NULL,    
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created the goods receipt
+);
+
+
+CREATE TABLE GoodsReceiptDetails (
+    GoodsReceiptItemId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    GoodsReceiptId UNIQUEIDENTIFIER NOT NULL,
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    ProductVariantId UNIQUEIDENTIFIER NOT NULL,
+    QuantityReceived DECIMAL(18, 4) NOT NULL,
+    UnitCost DECIMAL(18, 2) NOT NULL,
+    LineTotal DECIMAL(18, 2) NOT NULL,  -- UnitCost * QuantityReceived
+    FOREIGN KEY (GoodsReceiptId) REFERENCES GoodsReceipt(GoodsReceiptId),
+    FOREIGN KEY (ProductVariantId) REFERENCES ProductVariant(ProductVariantId)
+);
+
+
+------ Supplier or Vendor Invoice Table. ::: shows you own the supplier for the goods you have received
+CREATE TABLE SupplierInvoice (
+    SupplierInvoiceId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    GoodsReceiptId UNIQUEIDENTIFIER NULL,
+    SupplierId UNIQUEIDENTIFIER NOT NULL,
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    InvoiceNumber NVARCHAR(100) NOT NULL,
+    InvoiceDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+    DueDate DATETIME2 NOT NULL,
+    TotalAmount DECIMAL(18, 2) NOT NULL,
+    TotalPaid DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created the supplier invoice
+    Status NVARCHAR(50) NOT NULL, -- e.g., 'Unpaid', 'Paid', 'Overdue', 'Partially Paid','Canceled'
+    FOREIGN KEY (SupplierId) REFERENCES Supplier(SupplierId),
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId),
+    CONSTRAINT UQ_SupplierInvoice_Supplier_InvoiceNumber UNIQUE (SupplierId, InvoiceNumber)
+);
+
+----------------- Invoice Paymensts to suppliers or from customers
+
+CREATE TABLE InvoicePayment (
+    PaymentId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    SupplierOrCustomerInvoiceId UNIQUEIDENTIFIER NOT NULL,
+    SupplierOrCustomer NVARCHAR(50) NOT NULL, -- 'SUPPLIER' or 'CUSTOMER'
+    PaymentDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+    AmountPaid DECIMAL(18, 2) NOT NULL,
+    PaymentMethod NVARCHAR(50) NOT NULL, -- e.g., 'Bank Transfer', 'Check', 'Cash','MOMO',
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who recorded the payment
+    FOREIGN KEY (SupplierInvoiceId) REFERENCES SupplierInvoice(SupplierInvoiceId)
+);
+
+---- NB :: ADD CREQTEDBY AND AT TO ALL TABLES WHERE NECESSARY
+
+
+-- REVISED Cost Table
+CREATE TABLE Cost (
+    CostId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    ProductVariantId UNIQUEIDENTIFIER NOT NULL,
+    LocationId UNIQUEIDENTIFIER, 
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+   ---------- SupplierId UNIQUEIDENTIFIER NOT NULL, -- <-- This is the Supplier's ID
+    Cost DECIMAL(18, 2) NOT NULL, 
+    EffectiveDate DATE NOT NULL DEFAULT GETDATE(),
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created this cost record
+    FOREIGN KEY (ProductVariantId) REFERENCES ProductVariant(ProductVariantId),
+    FOREIGN KEY (LocationId) REFERENCES Location(LocationId),
+    FOREIGN KEY (SupplierId) REFERENCES Supplier(SupplierId) -- <-- The foreign key constraint
+
+);
+
+CREATE TABLE Pricing (
+    PricingId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    ProductVariantId UNIQUEIDENTIFIER NULL,
+    LocationId UNIQUEIDENTIFIER NOT NULL,
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    Price DECIMAL(18, 2) NOT NULL,
+    PackType NVARCHAR(50) NOT NULL, -- e.g., 'Single', 'Case', 'Dozen'
+    QuantityReduction DECIMAL(18, 4) NOT NULL DEFAULT 0,  --- Quantity to reduce from inventory per sale (e.g., 1 for single, 12 for dozen)
+    ReductionAmount DECIMAL(18, 2) NOT NULL DEFAULT 0, -- Flat amount discount
+    ReductionPercentage DECIMAL(5, 2) NOT NULL DEFAULT 0, -- Percentage discount (0.00 to 100.00)
+    EffectiveDate DATE NOT NULL DEFAULT GETDATE(),
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created this pricing record
+    LastUpdated DATETIME2 NOT NULL DEFAULT GETDATE(),
+    UpdatedBy UNIQUEIDENTIFIER NULL, -- User who last updated this pricing record
+    FOREIGN KEY (ProductVariantId) REFERENCES ProductVariant(ProductVariantId),
+    FOREIGN KEY (LocationId) REFERENCES Location(LocationId),
+    CONSTRAINT UQ_Pricing_Variant_Location_PackType_Date UNIQUE (ProductVariantId, LocationId, PackType, EffectiveDate)
+);
+
+
+
+
+-- 13. Customer Table
+CREATE TABLE Customer (
+    CustomerId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL, -- Links customer data to the owning company
+    CustomerCode NVARCHAR(50) NOT NULL,
+    FirstName NVARCHAR(100) NOT NULL,
+    LastName NVARCHAR(100),
+    CompanyName NVARCHAR(255),
+    Email NVARCHAR(255),
+    Phone NVARCHAR(50),
+    AddressLine1 NVARCHAR(255),
+    City NVARCHAR(100),
+    IsActive BIT NOT NULL DEFAULT 1,
+    LoyaltyPoints DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+   CreatedBy UNIQUEIDENTIFIER NULL, -- User who created this customer
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId),
+    -- Ensures the customer code is unique only within the context of a single company
+    CONSTRAINT UQ_Customer_Company_Code UNIQUE (CompanyId, CustomerCode)
+);
+
+-- Index for quick lookups during transactions
+CREATE INDEX IX_Customer_CompanyId ON Customer (CompanyId);
+CREATE INDEX IX_Customer_Phone ON Customer (Phone);
+
+);
+
+
+
+
+
+
+
+
+-- 14. SaleHeader Table (The Transaction Receipt)
+CREATE TABLE Sales (
+    SaleHeaderId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL, -- Inherited from Location, but good for quick filtering
+    LocationId UNIQUEIDENTIFIER NOT NULL, -- Which store processed the sale
+    UserId UNIQUEIDENTIFIER NOT NULL, -- Which employee/cashier processed the sale
+    CustomerId UNIQUEIDENTIFIER NULL, -- Optional: Which customer made the purchase
+    SaleDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+    TotalAmount DECIMAL(18, 2) NOT NULL,
+    TotalTax DECIMAL(18, 2) NOT NULL,
+    TotalDiscount DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created this sale record
+    Status NVARCHAR(50) NOT NULL, -- e.g., 'Completed', 'Canceled'
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId),
+    FOREIGN KEY (LocationId) REFERENCES Location(LocationId),
+    FOREIGN KEY (UserId) REFERENCES [User](UserId),
+    FOREIGN KEY (CustomerId) REFERENCES Customer(CustomerId)
+);
+
+-- Index for fast reporting by location and date
+CREATE INDEX IX_SaleHeader_Location_Date ON SaleHeader (LocationId, SaleDate);
+
+-- 15. SaleItem Table (The Products Sold)
+CREATE TABLE SalesDetail (
+    SaleItemId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    SaleHeaderId UNIQUEIDENTIFIER NOT NULL,
+    ProductVariantId UNIQUEIDENTIFIER NOT NULL,
+    Quantity DECIMAL(18, 4) NOT NULL,
+    UnitCost DECIMAL(18, 2) NOT NULL, -- COGS at time of sale
+    UnitPrice DECIMAL(18, 2) NOT NULL, -- Price recorded at time of sale
+    TotalProfit DECIMAL(18, 2) NOT NULL, -- (UnitPrice - UnitCost) * Quantity
+    DiscountAmount DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    LineTotal DECIMAL(18, 2) NOT NULL, --- Total price * Quantity - discount
+    FOREIGN KEY (SaleHeaderId) REFERENCES SaleHeader(SaleHeaderId),
+    FOREIGN KEY (ProductVariantId) REFERENCES ProductVariant(ProductVariantId)
+);
+
+
+
+CREATE TABLE SalePayment (
+    SalePaymentId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    SalesId UNIQUEIDENTIFIER NOT NULL,
+    PaymentMethodId int NOT NULL,
+    Amount DECIMAL(18, 2) NOT NULL,
+    ReferenceNumber NVARCHAR(255) NULL, -- Gateway Transaction ID
+    PaymentDate DATETIME NOT NULL DEFAULT GETDATE(),
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, 
+    FOREIGN KEY (SaleHeaderId) REFERENCES SaleHeader(SaleHeaderId),
+    FOREIGN KEY (PaymentMethodId) REFERENCES PaymentMethod(PaymentMethodId)
+);
+
+
+
+
+
+
+
+
+
+--  MAKE THE VALUES ENUM  FOR PAYMENT METHODS
+ --MOMO, CASH, BANK TRANSFER, CARD,CHEQUE, BANK DEPOSIT, 
+CREATE TABLE PaymentMethod (
+    PaymentMethodId INT PRIMARY KEY IDENTITY(1,1),
+    MethodName NVARCHAR(100) NOT NULL,
+    PaymentType NVARCHAR(50) NOT NULL, -- e.g., 'CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'OTHER'
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId)
+);
+
+
+
+
+-- 18. ReturnHeader Table
+CREATE TABLE GoodsReturn (
+    ReturnId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    LocationId UNIQUEIDENTIFIER NOT NULL,
+    UserId UNIQUEIDENTIFIER NOT NULL, -- Employee processing the return
+    SalesOrPurchaseId UNIQUEIDENTIFIER NULL, -- The original sale (if receipt available)
+    ReturnType NVARCHAR(50) NOT NULL, -- 'SALE_RETURN' or 'PURCHASE_RETURN' :::: INWARD OR OUTWARD
+    ReturnDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+    TotalRefundAmount DECIMAL(18, 2) NOT NULL,
+    ReturnReason NVARCHAR(255),
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created this return record
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId),
+    FOREIGN KEY (LocationId) REFERENCES Location(LocationId),
+    FOREIGN KEY (UserId) REFERENCES [User](UserId),
+    FOREIGN KEY (SaleHeaderId) REFERENCES SaleHeader(SaleHeaderId)
+);
+
+-- 19. ReturnItem Table
+CREATE TABLE GoodsReturnedDetails (
+    ReturnItemId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    ReturnHeaderId UNIQUEIDENTIFIER NOT NULL,
+    ProductVariantId UNIQUEIDENTIFIER NOT NULL,
+    ProdutId UNIQUEIDENTIFIER NULL, -- Link to the specific sold item
+    QuantityReturned DECIMAL(18, 4) NOT NULL,
+    RefundAmount DECIMAL(18, 2) NOT NULL, -- The amount returned for this item
+    ReturnOutcome NVARCHAR(50) NOT NULL, -- e.g., 'Refund', 'StoreCredit', 'Exchanged'
+    CreateedBy UNIQUEIDENTIFIER NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY (ReturnHeaderId) REFERENCES ReturnHeader(ReturnHeaderId),
+    FOREIGN KEY (ProductVariantId) REFERENCES ProductVariant(ProductVariantId),
+    FOREIGN KEY (SaleItemId) REFERENCES SaleItem(SaleItemId)
+);
+
+
+--NB :: When you do a refund , you must do an expence entry in the accounting module to balance the books. ||| Increaese the inventory as well 
+-- Try and flag the returned items in the inventory as well
+
+
+
+
+===================================================
+For Accounting 
+===================================================
+
+-- 20. GLAccount Table (Chart of Accounts)
+CREATE TABLE GLAccount (
+    GLAccountId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    AccountNumber NVARCHAR(20) NOT NULL,
+    AccountName NVARCHAR(255) NOT NULL,
+    AccountType NVARCHAR(50) NOT NULL, -- e.g., 'Asset', 'Revenue', 'Expense'
+    DebitIncreases BIT NOT NULL, -- 1 for Debit accounts, 0 for Credit accounts
+    IsActive BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created this GL account
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId),
+    CONSTRAINT UQ_GLAccount_Company_Number UNIQUE (CompanyId, AccountNumber)
+);
+
+-- 21. JournalEntryHeader Table
+CREATE TABLE JournalEntry (
+    JournalHeaderId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    CompanyId UNIQUEIDENTIFIER NOT NULL,
+    LocationId UNIQUEIDENTIFIER NOT NULL,
+    EntryDate DATETIME2 NOT NULL DEFAULT GETDATE(),
+    SourceTable NVARCHAR(50) NOT NULL, -- e.g., 'SaleHeader', 'SupplierInvoice'
+    SourceId UNIQUEIDENTIFIER NOT NULL, -- The ID of the source record
+    Description NVARCHAR(500),
+    IsPosted BIT NOT NULL DEFAULT 0, -- Prevents changes after posting
+    PostedDate DATETIME2 NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER NOT NULL, -- User who created this journal entry
+    FOREIGN KEY (CompanyId) REFERENCES Company(CompanyId)
+);
+
+-- Index for quick lookup by source (important for auditing)
+CREATE INDEX IX_JournalHeader_Source ON JournalEntryHeader (SourceTable, SourceId);
+
+-- 22. JournalEntryLine Table
+CREATE TABLE JournalEntryDetails (
+    JournalLineId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
+    JournalHeaderId UNIQUEIDENTIFIER NOT NULL,
+    GLAccountId UNIQUEIDENTIFIER NOT NULL,
+    DebitAmount DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    CreditAmount DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    FOREIGN KEY (JournalHeaderId) REFERENCES JournalEntryHeader(JournalHeaderId),
+    FOREIGN KEY (GLAccountId) REFERENCES GLAccount(GLAccountId),
+    -- Constraint to ensure either Debit or Credit has a value, but not both
+    CONSTRAINT CK_DebitOrCredit CHECK (
+        (DebitAmount > 0 AND CreditAmount = 0) OR 
+        (CreditAmount > 0 AND DebitAmount = 0) OR
+        (DebitAmount = 0 AND CreditAmount = 0) -- Allows for line items with zero amount if needed
+    )
+);
+
+
+
+-------- ADD READABLE COLUMNS TO THE FF : SALEITEM TABLE ,ETC
+-- Index for fast reporting on product sales
+CREATE INDEX IX_SaleItem_ProductVariantId ON SaleItem (ProductVariantId);
+
+
+
+
+7. Pricing Table
+The pricing table defines the selling price. Since prices can be set differently by location and packaging (PackType), this is a dedicated table.
+
+-------------------------------------------------
+
+Field,Purpose,Example Value
+ProductVariantId,Which specific item variation.,(ID for TS001-L-RED)
+LocationId,Price can differ by location.,(ID for 'Downtown Store')
+Price,The base selling price.,25.00
+PackType,"How the item is sold (e.g., 'Single', 'Box of 12', 'Bulk').",'Single'
+Reduction,Discount or special price reduction amount/percentage.,5.00 (or 20% stored in a separate field)
+EffectiveDate,When this price comes into effect. Important for historical and future pricing.,2025-12-01
+
+
+
+
+
+
+-------------------------------------------------
+Very Import to the Sales 
+-------------------------------------------------
+
+
+⚙️ Automation/Trigger Consideration
+To ensure data accuracy, you should consider using database triggers or application logic when a sale is completed:
+
+Inventory Reduction: When a sale is marked 'Completed', the application must reduce the Quantity in the Inventory table for the corresponding ProductVariantId and LocationId.
+
+Cost Capture: Before saving the SaleItem, the application must query the Cost table to find the current Cost for that ProductVariantId and copy it into the CostAtSale field. This ensures profit reports are accurate even if the cost changes tomorrow.
+
+This completes the core structure of your multi-tenant POS API database. We have covered:
+
+Multi-Tenancy Core: Tenant, Company, Location
+
+Catalog: Product, ProductVariant, Supplier
+
+Operational Data: Inventory, Pricing, Cost
+
+Security/People: User, Role, UserCompanyAssignment, Customer
+
+Transactions: SaleHeader, SaleItem
+
+
+
+
+
+
+-------------------------------------------------
+
+Default Account creation Process
+------------------------------------------------
+
+
+When a new company (Company A) registers, the system should execute the following steps in sequence:
+
+Step 1: Create the Tenant and Company Records
+The API registers the top-level account and the company under it.
+
+Create Tenant Record: (e.g., ID T-001)
+
+Create Company Record: (e.g., ID C-A) with a Foreign Key to T-001.
+
+Create Default Location: Create at least one default location (e.g., 'Main Store' or 'Headquarters') linked to C-A.
+
+Step 2: Create the Default Admin User
+The new company needs a user who can log in immediately to set up the rest of the organization. This user is often the person who initially signed up.
+
+Create Role Record (If missing): Ensure a base role like 'Company Admin' (e.g., RoleID: 2) exists in your global Role table.
+
+Create User Record:
+
+Create a new user entry (e.g., ID U-Admin) in the global User table.
+
+This user will use the initial login email and password provided during sign-up.
+
+Step 3: Link the User to the Company (The Crucial Step)
+This step grants the new user access to the newly created company with the highest administrative role.
+
+Create UserCompanyAssignment Record:
+
+UserId = U-Admin
+
+CompanyId = C-A
+
+RoleId = 2 (Company Admin)
+
+LocationId = NULL (since they have company-wide access)
+
+
+
+NB 
+
+Action,Why it's Best Practice
+Do NOT require the company to create the first user manually.,This leads to a complex initial setup and a window where the company exists but cannot be accessed.
+DO create the default admin user automatically.,"Provides an immediate, functional entry point. The system should provision a User record and an Assignment record simultaneously."
+DO use the UserCompanyAssignment table for this link.,"This ensures the user's login is centralized (in the User table) but their access rights are securely tied to the new Company record, adhering to the multi-tenant design."
+
+
+
+
+
+
+
+
+--------------------------------------------------
+Process of creating the default user 
+--------------------------------------------------
+
+
+Aspect,Description,Data Creation Flow
+User Input,"The user goes to your sign-up page and enters Tenant Name (e.g., ""The Main Account""), Company Name (e.g., ""Sam's Coffee Shop""), Admin Email, and Password.",The sign-up form drives the API call to your backend.
+Automation,"Fully automated. The API executes the three-step provisioning workflow outlined previously (create Tenant, Company, then User/Assignment).","High scalability, low overhead."
+Best For,"A public, scalable SaaS API where you want rapid, hands-off onboarding.",
+
+
+
+
+That's an excellent set of questions regarding the deployment and onboarding strategy. How you automate the creation of the Tenant, Company, and the initial User depends entirely on your business model (i.e., how you market and sell your POS API service).Here is a breakdown of the three main approaches, linking them back to your data model:🏗️ 1. Self-Service Model (Recommended)This is the standard approach for SaaS products. The user drives the creation process via a website.AspectDescriptionData Creation FlowUser InputThe user goes to your sign-up page and enters Tenant Name (e.g., "The Main Account"), Company Name (e.g., "Sam's Coffee Shop"), Admin Email, and Password.The sign-up form drives the API call to your backend.AutomationFully automated. The API executes the three-step provisioning workflow outlined previously (create Tenant, Company, then User/Assignment).High scalability, low overhead.Best ForA public, scalable SaaS API where you want rapid, hands-off onboarding.Automation Steps (Self-Service API Endpoint)This entire process should be encapsulated in a single API endpoint (e.g., POST /v1/onboarding/register):Backend Logic: Receive data: TenantName, CompanyName, AdminEmail, AdminPassword.Create Tenant: INSERT INTO Tenant (TenantName, ...)Create Company: INSERT INTO Company (TenantId, CompanyName, ...)Create Admin User: INSERT INTO [User] (Email, PasswordHash, ...)Assign Role: INSERT INTO UserCompanyAssignment (UserId, CompanyId, RoleId, ...)Response: Return a success message and an initial authentication token for the admin user.
+
+
+
+
+
+
+
+
+Automation Steps (Self-Service API Endpoint)
+This entire process should be encapsulated in a single API endpoint (e.g., POST /v1/onboarding/register):
+
+Backend Logic: Receive data: TenantName, CompanyName, AdminEmail, AdminPassword.
+
+Create Tenant: INSERT INTO Tenant (TenantName, ...)
+
+Create Company: INSERT INTO Company (TenantId, CompanyName, ...)
+
+Create Admin User: INSERT INTO [User] (Email, PasswordHash, ...)
+
+Assign Role: INSERT INTO UserCompanyAssignment (UserId, CompanyId, RoleId, ...)
+
+Response: Return a success message and an initial authentication token for the admin user.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+insert into feeschedulepaypartners
+(paypartnerserviceid,lowerlimit,upperlimit,paypartnerflatamount,paypartnerrate,eganowflatamount,eganowrate,cappedat,paypartnertypeid, makerid, finalyesno,collectionorpayout)
+select p.paypartnerserviceid,0.01, 10000000000000.00,0,0,0,1,120,2,'godwin@eganow.com','YES','PAYOUT' from paypartnerservices p 
+where p.paypartnertypeid = 2
+
+
+insert into feeschedulepaypartners
+(paypartnerserviceid,lowerlimit,upperlimit,paypartnerflatamount,paypartnerrate,eganowflatamount,eganowrate,cappedat,paypartnertypeid, makerid, finalyesno,collectionorpayout)
+select p.paypartnerserviceid,0.01, 10000000000000.00,0,0,0,0,0,2,'godwin@eganow.com','YES','COLLECTION' from paypartnerservices p 
+where p.paypartnertypeid = 2
+
+
+
+\
+
+
+CREATE OR REPLACE FUNCTION public.sel_fee_schedule_paypartner_range_to_calc_fees(pay_partner_service_id text, payout_or_collection text, trans_amount numeric, pay_partner_type_id integer)
+ RETURNS SETOF get_paypartner_fee_schedule_data
+ LANGUAGE sql
+AS $function$
+
+   select f.feeid as chargeid, f.collectionorpayout as drpayoutcrcollection,f.lowerlimit, f.upperlimit, f.paypartnerflatamount as paypartnerflatfeeamt, f.paypartnerrate as paypartnerfeerate,
+  f.eganowflatamount as eganowflatfeeamt, f.eganowrate as eganowfeerate, f.cappedat as totalfeemustnotexceedamt
+  from feeschedulepaypartners f  
+  WHERE f.paypartnerserviceid = pay_partner_service_id AND f.paypartnertypeid = pay_partner_type_id and f.collectionorpayout =payout_or_collection and (trans_amount BETWEEN f.lowerlimit AND f.upperlimit)
+
+$function$
+;
+
+
+
+

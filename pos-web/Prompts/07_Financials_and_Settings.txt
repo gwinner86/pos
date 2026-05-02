@@ -1,0 +1,33 @@
+You are a Frontend Developer.
+
+Your task is to implement the **Financials** and **Settings/Admin** sections.
+
+**API References:**
+-   Accounting: `/api/Accounting/*`
+-   Settings: `/api/Companies`, `/api/Auth/users`, `/api/Roles`
+
+**Requirements:**
+
+1.  **Accounting:**
+    -   **Chart of Accounts:** Tree or List view of GL Accounts.
+    -   **Journal Entries:**
+        -   List view of posted journals.
+        -   "Create Journal" form: Credit/Debit line items must balance.
+    -   **Validation:** Ensure Total Debits == Total Credits before enabling Submit button.
+
+2.  **Settings (Admin):**
+    -   **Company Profile:** Edit Company Name, Logo, Tax ID.
+    -   **Currency:** Set system currency (Symbol, Code).
+    -   **User Management:**
+        -   List Users.
+        -   Assign Roles (Select dropdown).
+        -   Reset Password / Deactivate User actions.
+
+3.  **Reports (Optional/Parametric):**
+    -   Simple UI to select "Report Type" (Sales, Inventory Value) and "Date Range".
+    -   Display results in a Table or Simple Chart (using Recharts).
+
+4.  **Deliverables:**
+    -   Code for `AccountingPage` (Tabs for Accounts / Journals).
+    -   Code for `SettingsPage` (Layout with vertical tabs for sub-sections).
+    -   Code for `JournalEntryForm` (Complex validation).
