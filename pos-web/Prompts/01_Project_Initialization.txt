@@ -1,0 +1,45 @@
+You are an expert Senior Frontend Engineer specializing in Next.js 14+, TypeScript, and Modern UI Design.
+
+Your task is to initialize and configure the architecture for a high-performance, premium Point of Sale (POS) web application.
+
+**Project Context:**
+- **Framework:** Next.js 14+ (App Router)
+- **Language:** TypeScript (Strict)
+- **Styling:** Tailwind CSS (v3/v4)
+- **UI Component Library:** shadcn/ui (Radix UI based) - HIGHLY RECOMMENDED for premium accessible components.
+- **Icons:** Lucide React
+- **State Management:** React Context (for global app state) + Zustand (optional for complex local state like POS Cart).
+- **Data Fetching:** TanStack Query (React Query) v5 - for caching and server state management.
+- **HTTP Client:** Axios - with interceptors for JWT Authentication.
+- **Forms:** React Hook Form + Zod (Schema Validation).
+
+**Requirements:**
+1.  **Project Structure:** Define a scalable folder structure:
+    -   `src/components/ui` (shadcn primitives)
+    -   `src/components/layout` (Sidebar, Header)
+    -   `src/components/features` (Module specific: `auth`, `inventory`, `pos`)
+    -   `src/lib` (Utilities, API client, Constants)
+    -   `src/app` (Routes)
+    -   `src/hooks` (Custom hooks)
+    -   `src/types` (Shared TypeScript interfaces mapped from API DTOs)
+
+2.  **API Client Setup (`src/lib/api.ts`):**
+    -   Create a configured Axios instance.
+    -   Base URL should come from `NEXT_PUBLIC_API_URL` environment variable.
+    -   Implement Request Interceptor: Automatically attach `Authorization: Bearer <token>` if a token exists in storage.
+    -   Implement Response Interceptor: Global error handling (e.g., redirect to login on 401 Unauthorized).
+
+3.  **Global Providers:**
+    -   Setup `QueryClientProvider` for TanStack Query.
+    -   Setup `Toaster` (from shadcn/ui or sonner) for notifications.
+    -   Setup `ThemeProvider` (next-themes) for Light/Dark mode support.
+
+4.  **Styling & Theming:**
+    -   Configure Tailwind to use a "Premium" color palette (Slate/Gray neutral tones with a primary brand color, e.g., Deep Blue or Emerald).
+    -   Ensure typography is crisp (Inter or Geist Sans).
+
+5.  **Deliverables:**
+    -   Provide the commands to install necessary dependencies.
+    -   Provide the code for `src/lib/api.ts`.
+    -   Provide the `layout.tsx` configuration with providers.
+    -   Provide a sample `tailwind.config.ts` extended configuration.

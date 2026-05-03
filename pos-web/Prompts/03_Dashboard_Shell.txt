@@ -1,0 +1,45 @@
+You are a UI/UX Specialist and Frontend Engineer.
+
+Your task is to build the **Dashboard Layout (Shell)** for the POS System. This is the container that will wrap all protected application pages.
+
+**Design Philosophy:**
+-   **Structure:** Classic "Admin Dashboard" layout: Fixed Sidebar (Left), Fixed Header (Top), Scrollable Main Content Area.
+-   **Aesthetics:** Professional, Clean, High-Contrast. using the definitions from the Project Initialization.
+
+**Requirements:**
+
+1.  **Sidebar (`Sidebar.tsx`):**
+    -   **Logo:** Branding area at the top.
+    -   **Navigation Menu:** Vertical list of links with Icons (Lucide React).
+    -   **Active State:** Highlight the current route visually.
+    -   **Collapsible:** Button to toggle expanded/collapsed state (Icon only vs Full text).
+    -   **Menu Structure (based on API Modules):**
+        -   Dashboard (Home)
+        -   Point of Sale (POS)
+        -   Sales History
+        -   Inventory (Products, Categories, Adjustments)
+        -   Procurement (Suppliers, Purchase Orders, Goods Receipts)
+        -   Customers
+        -   Accounting (Journal, Accounts)
+        -   Settings (Users, Roles, Company, Currency)
+
+2.  **Header (`Header.tsx`):**
+    -   **Breadcrumbs:** Dynamic path indication (e.g., `Home > Inventory > Products`).
+    -   **Global Search:** A quick search bar (cmd+k style).
+    -   **Actions:**
+        -   Theme Toggle (Dark/Light).
+        -   Notifications Bell (Badge with count).
+        -   User Profile Dropdown (Avatar, Name, "Logout" button).
+
+3.  **Mobile Responsiveness:**
+    -   On mobile, the Sidebar should be hidden behind a Hamburger menu (Sheet/Offcanvas).
+    -   Layout must stack gracefully.
+
+4.  **Implementation:**
+    -   Use `shadcn/ui` components: `Sheet` (for mobile sidebar), `DropdownMenu` (for profile), `Avatar`, `Button`, `Breadcrumb`.
+    -   Ensure smooth transitions/animations.
+
+5.  **Deliverables:**
+    -   Code for `DashboardLayout.tsx` (Server Component wrapper).
+    -   Code for `Sidebar` component with navigation data structure.
+    -   Code for `Header` component.

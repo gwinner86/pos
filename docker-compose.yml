@@ -1,0 +1,33 @@
+services:
+  sqlserver:
+    # Azure SQL Edge: ARM64-compatible image (works on Apple M1/M2/M3)
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    container_name: pos_sqlserver
+    user: root
+    environment:
+      SA_PASSWORD: "Password123!"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1434:1433"
+    volumes:
+      # Map the system files to a hidden directory to fix AIO bugs while keeping db-data clean
+      - ./.system-db:/var/opt/mssql/data
+      # Map db-data for POS_DB
+      - ./db-data:/var/opt/userdata
+
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Password123!' -Q 'SELECT 1' || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  sqlserver_system:

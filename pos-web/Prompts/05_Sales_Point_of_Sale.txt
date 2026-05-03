@@ -1,0 +1,43 @@
+You are a Frontend Architect.
+
+Your task is to design and build the core **Point of Sale (POS) Interface**. This is the most critical part of the application and must be fast, keyboard-friendly, and intuitive.
+
+**API References:**
+-   Sales: `POST /api/Sales`
+-   Products: `GET /api/Products` (for grid)
+-   Customers: `GET /api/Customers`
+
+**Requirements:**
+
+1.  **Layout:**
+    -   **Left Panel (2/3 width):** Product Catalog.
+        -   Search Bar (Global focus).
+        -   Category Filter Tabs (Pills).
+        -   **Product Grid:** Cards displaying Image, Name, Price, and Stock.
+        -   **Interaction:** Clicking a product adds it to the Cart immediately.
+    -   **Right Panel (1/3 width):** The "Ticket" / Cart.
+        -   Customer Selector (Combobox to search/add customer).
+        -   Line Items List: Product Name, Qty (Steppers +/-), Price, Total, Remove Button.
+        -   **Summary Section:** Subtotal, Tax, Discount, Grand Total.
+        -   **Action Buttons:** "Hold Sale", "Void", "Pay / Checkout".
+
+2.  **Checkout Modal:**
+    -   Triggered by "Pay" button.
+    -   **Payment Methods:** Cash, Card, Mobile, Split Payment (Multi-tender).
+    -   **Amount Entry:** Numpad UI for touch-screen friendliness.
+    -   **Completion:** On success, show "Change Due" and option to Print Receipt.
+
+3.  **State Management:**
+    -   Use `Zustand` or `useReducer` to manage the Cart state (Items, Customer, Totals) locally before submitting to API.
+    -   Calculations (Tax, Totals) should happen in real-time on the client-side.
+
+4.  **Performance:**
+    -   The Product Grid must render thousands of items efficiently (Virtualization if needed, though pagination preferred for web).
+    -   Debounce search inputs.
+
+5.  **Deliverables:**
+    -   Code for `PosLayout`.
+    -   Code for `ProductGrid` and `ProductCard` components.
+    -   Code for `CartSidebar` component.
+    -   Code for `CheckoutModal` component.
+    -   State management logic (Hook/Store).

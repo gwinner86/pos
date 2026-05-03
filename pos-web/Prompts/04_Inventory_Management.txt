@@ -1,0 +1,40 @@
+You are a Frontend Expert.
+
+Your task is to implement the **Inventory Management Module**. This is data-heavy and requires efficient table rendering and complex forms.
+
+**API References:**
+-   Products: `GET/POST/PUT /api/Products`
+-   Categories: `GET/POST/PUT /api/Categories`
+-   Inventory: `GET /api/Inventory`, `POST /api/Inventory/adjust`
+
+**Requirements:**
+
+1.  **Product List Page:**
+    -   **Component:** `DataTable` (using TanStack Table / shadcn `DataTable`).
+    -   **Columns:** Name, SKU, Category, Price, Stock Level (Available), Status (Active/Inactive), Actions (Edit, Delete).
+    -   **Features:**
+        -   Server-side Pagination, Sorting, and Filtering (Search by name/SKU).
+        -   "Create Product" button (opens Modal or redirects).
+
+2.  **Product Form (Create/Edit):**
+    -   **Layout:** Multi-step or Tabbed form (General Info, Pricing, Inventory, Variants).
+    -   **Fields:**
+        -   Name, SKU, Barcode.
+        -   Category (Select dropdown fetching from `/api/Categories`).
+        -   Price, Cost.
+        -   **Variants:** Dynamic list (Size, Color). This is complex. Allow adding multiple variants, each with its own SKU/Price modification.
+    -   **Validation:** Zod schema.
+
+3.  **Inventory Adjustment Page:**
+    -   Allow users to manually adjust stock levels (e.g., "Damaged", "Stocktake").
+    -   **Form:** Select Product/Variant -> Enter Quantity -> Select Reason -> Submit.
+
+4.  **UX Details:**
+    -   Use `Select` and `Combobox` (Autocomplete) for identifying products/categories.
+    -   Show success toasts on save.
+    -   Handle loading states gracefully (Skeletons in table).
+
+5.  **Deliverables:**
+    -   Code for `ProductsPage` (List).
+    -   Code for `ProductForm` (Reusable for Create/Edit).
+    -   Zod schemas for Product and Inventory.
