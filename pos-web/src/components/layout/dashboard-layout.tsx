@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
@@ -267,7 +267,41 @@ export function Header({
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const { user, selectedCompany, selectedLocation, isLoading } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const [isCollapsed, setIsCollapsed] = useState(false);
+
+    useEffect(() => {
+        if (isLoading) return;
+
+        if (!user) {
+            router.push("/login");
+            return;
+        }
+
+        if (!selectedCompany && pathname !== "/select-company") {
+            router.push("/select-company");
+            return;
+        }
+
+        if (!selectedLocation && pathname !== "/select-location") {
+            router.push("/select-location");
+            return;
+        }
+    }, [user, selectedCompany, selectedLocation, isLoading, router, pathname]);
+
+    if (isLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            </div>
+        );
+    }
+
+    if (!user || (!selectedCompany && pathname !== "/select-company") || (!selectedLocation && pathname !== "/select-location")) {
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-muted/40">

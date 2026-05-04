@@ -1,7 +1,27 @@
 import axios from 'axios';
 
+declare global {
+    interface Window {
+        API_URL?: string;
+        ENV?: {
+            API_URL: string | null;
+        };
+    }
+}
+
+const getBaseURL = () => {
+    if (typeof window !== 'undefined') {
+        // 1. Check for Electron preload injected URL
+        if (window.ENV?.API_URL) return window.ENV.API_URL;
+        // 2. Check for manually injected URL
+        if (window.API_URL) return window.API_URL;
+    }
+    // 3. Fallback to env var or default
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5047';
+};
+
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5047',
+    baseURL: getBaseURL(),
     headers: {
         'Content-Type': 'application/json',
     },

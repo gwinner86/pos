@@ -26,6 +26,7 @@ Thumbs.db
 node_modules/
 /pos-web/.next/
 /pos-web/dist/
+/pos-web/dist-electron/
 /pos-web/out/
 /pos-web/backend-dist/
 /pos-web/build/
@@ -44,6 +45,9 @@ yarn-error.log*
 *.sln.docstates
 # Ignore published folders
 /POS-API/dist-api/
+*.dmg
+*.app
+*.asar
 
 # --- Database / Data ---
 # We ignore the active MDF/LDF files used by the DB engine, 

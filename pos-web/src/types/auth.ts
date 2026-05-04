@@ -13,7 +13,7 @@ export interface User {
     lastName: string;
     role: string;
     tenantId: string;
-    companyId: string;
+    companyId?: string;
     companyEmailAddress?: string;
     permissions?: string[];
     requiresPasswordChange?: boolean;
@@ -34,9 +34,16 @@ export interface RegisterTenantRequest {
 
 export interface LoginResponse {
     token: string;
-    refreshToken: string;
-    user: User;
     expiration: string;
+    userId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    tenantId: string;
+    role: string;
+    companyId?: string;
+    requiresPasswordChange: boolean;
+    permissions: string[];
 }
 
 export interface AuthState {
@@ -44,7 +51,6 @@ export interface AuthState {
     tenant: Tenant | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    verifyTenant: (name: string) => Promise<Tenant>;
     selectedCompany: Company | null;
     selectedLocation: Location | null;
     setSelectedCompany: (company: Company) => void;

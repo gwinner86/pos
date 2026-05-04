@@ -97,10 +97,15 @@ async function startBackend(apiPort) {
     throw new Error(`Backend executable not found at: ${backendExe}`);
   }
 
-  // Read connection string from appsettings.json to pass it explicitly
+  // Read connection string from appropriate appsettings file
   let connectionString = '';
+  const env = isDev ? 'Development' : 'Production';
+  
   try {
-    const configPath = path.join(backendDir, 'appsettings.json');
+    const primaryConfigPath = path.join(backendDir, `appsettings.${env}.json`);
+    const fallbackConfigPath = path.join(backendDir, 'appsettings.json');
+    const configPath = fs.existsSync(primaryConfigPath) ? primaryConfigPath : fallbackConfigPath;
+    
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       connectionString = config.ConnectionStrings?.DefaultConnection || '';
@@ -116,10 +121,16 @@ async function startBackend(apiPort) {
       // Replace placeholder with actual path
       if (connectionString.includes('{DATA_PATH}')) {
         connectionString = connectionString.replace(/{DATA_PATH}/g, dataPath);
-        log(`[Backend] Resolved Connection String: ${connectionString}`);
+      }
+
+      // macOS Fallback: If on Mac and connection string uses LocalDB, switch to Docker SQL Server
+      if (process.platform === 'darwin' && connectionString.includes('(localdb)')) {
+        log(`[Backend] macOS detected with LocalDB connection string. Switching to Docker SQL Server fallback.`);
+        connectionString = "Server=127.0.0.1,1434;Database=POS_DB;User Id=sa;Password=Password123!;TrustServerCertificate=True;MultipleActiveResultSets=true";
       }
       
-      log(`[Backend] Loaded connection string from appsettings.json`);
+      log(`[Backend] Using connection string: ${connectionString}`);
+      log(`[Backend] Environment: ${env}`);
     }
   } catch (err) {
     log(`[Backend] Warning: Could not read appsettings.json: ${err.message}`);
@@ -139,7 +150,7 @@ async function startBackend(apiPort) {
     env: {
       ...process.env,
       ASPNETCORE_URLS: `http://127.0.0.1:${apiPort}`,
-      ASPNETCORE_ENVIRONMENT: 'Production',
+      ASPNETCORE_ENVIRONMENT: env,
       ConnectionStrings__DefaultConnection: connectionString,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -212,6 +223,11 @@ async function startNextServer(frontendPort, apiPort) {
 // ─────────────────────────────────────────────
 async function createWindow() {
   const isDev = !app.isPackaged;
+  const apiPort = isDev ? 5047 : await findFreePort(5100, 5999);
+  const frontendPort = isDev ? 3000 : await findFreePort(3100, 3999);
+
+  // Set environment variable for preload to pick up
+  process.env.DYNAMIC_API_URL = `http://127.0.0.1:${apiPort}`;
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -222,24 +238,22 @@ async function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true,
+      sandbox: false, 
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
   mainWindow.setMenuBarVisibility(false);
 
   if (isDev) {
-    log('[Electron] Dev mode: connecting to http://localhost:3000...');
+    log(`[Electron] Dev mode: connecting to http://127.0.0.1:${frontendPort}...`);
     mainWindow.webContents.openDevTools();
-    await waitForPort(3000).catch(() => {
-      log('[Electron] Warning: Dev server port 3000 not responding.');
+    await waitForPort(frontendPort).catch(() => {
+      log(`[Electron] Warning: Dev server port ${frontendPort} not responding.`);
     });
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadURL(`http://127.0.0.1:${frontendPort}`);
   } else {
     try {
-      const apiPort = await findFreePort(5100, 5999);
-      const frontendPort = await findFreePort(3100, 3999);
-
       log(`[Electron] Starting production services...`);
       await startBackend(apiPort);
       await startNextServer(frontendPort, apiPort);

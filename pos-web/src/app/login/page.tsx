@@ -6,9 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
+import { ApiResponse } from "@/types/api";
+import { LoginResponse, User } from "@/types/auth";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,10 +43,23 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-    const { login, verifyTenant, tenant } = useAuth();
+    const { login, verifyTenant, tenant, isAuthenticated, isLoading: authLoading, user, selectedCompany, selectedLocation } = useAuth();
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [isVerifyingTenant, setIsVerifyingTenant] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+        if (!authLoading && isAuthenticated) {
+            if (!selectedCompany) {
+                router.push("/select-company");
+            } else if (!selectedLocation) {
+                router.push("/select-location");
+            } else {
+                router.push("/dashboard");
+            }
+        }
+    }, [isAuthenticated, authLoading, router, selectedCompany, selectedLocation]);
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -96,18 +112,16 @@ export default function LoginPage() {
     async function onSubmit(data: LoginFormValues) {
         setIsLoading(true);
         try {
-            const response = await api.post("/api/Auth/login", {
+            const response = await api.post<ApiResponse<LoginResponse>>("/api/Auth/login", {
                 email: data.email,
                 password: data.password,
                 tenantName: data.tenantName || null,
             });
 
-            // response.data is ApiResponse<LoginResponse>
-            const apiResponse = response.data;
-            const loginData = apiResponse.data;
+            const loginData = response.data.data;
 
             // map api user to local user
-            const authUser = {
+            const authUser: User = {
                 id: loginData.userId,
                 email: loginData.email,
                 firstName: loginData.firstName,

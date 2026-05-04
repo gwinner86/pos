@@ -7,7 +7,8 @@ import api from "@/lib/api";
 import { Loader2, Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { Company, LoginResponse } from "@/types/auth";
+import { Company, LoginResponse, User } from "@/types/auth";
+import { ApiResponse } from "@/types/api";
 import { toast } from "sonner";
 import { SelectionHeader } from "@/components/layout/selection-header";
 
@@ -66,23 +67,12 @@ export default function SelectCompanyPage() {
     const handleSelectCompany = async (company: Company) => {
         try {
             // Call API to switch context and get new token
-            const response = await api.post<{ data: { token: string } }>(`/api/Auth/switch-company/${company.companyId}`);
+            const response = await api.post<ApiResponse<LoginResponse>>(`/api/Auth/switch-company/${company.companyId}`);
 
-            // Assuming response matches LoginResponse structure or wrapper
-            const newToken = response.data.data.token;
+            const loginData = response.data.data;
 
-            if (newToken && user) {
-                // Update local auth state with new token
-                // We reuse login method to update token and user, but we need to ensure we don't lose user info if not returned fully
-                // Or we can just update token manually? 
-                // The API returns LoginResponse which has User.
-                // Let's interpret response fully.
-
-                // Correction: The API returns ApiResponse<any> where data corresponds to the backend LoginResponse.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const loginData = response.data.data as any;
-
-                const authUser = {
+            if (loginData.token && user) {
+                const authUser: User = {
                     id: loginData.userId,
                     email: loginData.email,
                     firstName: loginData.firstName,
@@ -90,7 +80,8 @@ export default function SelectCompanyPage() {
                     role: loginData.role,
                     tenantId: loginData.tenantId,
                     companyId: loginData.companyId,
-                    permissions: loginData.permissions
+                    permissions: loginData.permissions,
+                    requiresPasswordChange: loginData.requiresPasswordChange
                 };
 
                 login(loginData.token, authUser); // Update token and user

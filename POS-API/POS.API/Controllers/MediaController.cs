@@ -17,7 +17,7 @@ namespace POS.API.Controllers
         }
 
         [HttpPost("upload")]
-        public async Task<ActionResult<ApiResponse<object>>> UploadImage([FromForm] IFormFile file)
+        public async Task<ActionResult<ApiResponse<object>>> UploadImage(IFormFile file)
         {
             if (file == null || file.Length == 0)
                 return BadRequest(ApiResponse<object>.FailureResponse("No file uploaded.", 400));

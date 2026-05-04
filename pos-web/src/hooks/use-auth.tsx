@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { AuthState, LoginResponse, User, Tenant, Company, Location } from "@/types/auth";
+import { useRouter } from "next/navigation";
+import { AuthState, User, Tenant, Company, Location } from "@/types/auth";
+import { ApiResponse } from "@/types/api";
 import api from "@/lib/api";
 
 interface AuthContextType extends AuthState {
@@ -16,12 +17,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [state, setState] = useState<AuthState>({
         user: null,
-        tenant: null, // Initial value
+        tenant: null,
         selectedCompany: null,
         selectedLocation: null,
         isAuthenticated: false,
         isLoading: true,
-        verifyTenant: async () => { throw new Error("Not implemented yet"); }, // Placeholder
         setSelectedCompany: () => { },
         setSelectedLocation: () => { }
     });
@@ -30,7 +30,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        // We do NOT remove tenant on logout, as per requirements requests to persist it
         localStorage.removeItem("company");
         localStorage.removeItem("location");
         setState(prev => ({
@@ -41,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: false,
             isLoading: false,
         }));
-        router.push("/login"); // Fixed recursion by using explicit path or handling in interceptor
+        router.push("/login");
     };
 
     useEffect(() => {
@@ -126,15 +125,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
-
-
     const verifyTenant = async (name: string): Promise<Tenant> => {
         try {
-            const response = await api.get<{ data: Tenant }>(`/api/Tenants/by-name/${name}`);
+            const response = await api.get<ApiResponse<Tenant>>(`/api/Tenants/by-name/${name}`);
             const tenant = response.data.data;
 
             localStorage.setItem("tenant", JSON.stringify(tenant));
-            setState(prev => ({ ...prev, tenant })); // Update state
+            setState(prev => ({ ...prev, tenant }));
 
             return tenant;
         } catch (error) {

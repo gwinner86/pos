@@ -8,6 +8,7 @@ import { Loader2, MapPin, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Location } from "@/types/auth";
+import { ApiResponse } from "@/types/api";
 import { toast } from "sonner";
 import { SelectionHeader } from "@/components/layout/selection-header";
 
